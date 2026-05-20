@@ -4,7 +4,9 @@ A browser-based Photoshop-style image editor. Single self-contained `index.html`
 
 ## Live demo
 
-Deployed on Vercel — URL will appear here after the first deploy.
+**https://pixelforge-web-sigma.vercel.app/**
+
+Deployed on Vercel. Single-file static site — opens straight into the editor, no signup, works offline once loaded.
 
 ## What's inside
 
