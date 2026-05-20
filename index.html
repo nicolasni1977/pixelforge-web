@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="description" content="Professional browser-native image editor with zero dependencies.">
+<meta name="theme-color" content="#0f0f13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>PixelForge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,7 +97,31 @@ html, body {
         "status status status";
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* dynamic vh — accounts for mobile browser chrome */
     overflow: hidden;
+    /* Honor iOS safe-area insets on notched devices */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+html, body {
+    overscroll-behavior: none; /* prevent pull-to-refresh */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+}
+button, .tool-btn, .btn-icon {
+    touch-action: manipulation; /* prevent double-tap zoom on iOS */
+}
+/* Hide hover tooltips on touch devices — they never dismiss */
+@media (hover: none) {
+    [data-tooltip]::after,
+    [data-tooltip]::before {
+        display: none !important;
+    }
+    #pf-tooltip {
+        display: none !important;
+    }
 }
 
 /* === TITLE BAR === */
@@ -998,6 +1026,10 @@ html, body {
         height: 40px;
     }
 }
+/* Hide dock-toggle by default; show only on mobile widths */
+.dock-toggle { display: none; }
+/* Hide mobile toolbar above breakpoint */
+.mobile-toolbar { display: none; }
 @media (max-width: 768px) {
     .app-grid {
         grid-template-columns: 1fr;
@@ -1011,24 +1043,37 @@ html, body {
     .tool-rail {
         display: none;
     }
+    .dock-toggle {
+        display: inline-flex;
+    }
+    /* Hide grid-toggle on small screens — uncommon on mobile, frees space */
+    #btnGridToggle { display: none; }
     .mobile-toolbar {
         grid-area: mobile-toolbar;
         display: flex;
         align-items: center;
-        justify-content: space-around;
+        justify-content: flex-start;
+        gap: var(--space-1);
         padding: 0 var(--space-2);
         background: var(--color-panels);
         border-top: 1px solid var(--color-rules);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
     }
+    .mobile-toolbar::-webkit-scrollbar { display: none; }
     .mobile-toolbar .tool-btn {
         width: 44px;
         height: 44px;
+        flex-shrink: 0;
     }
     .panel-dock {
         position: fixed;
         top: var(--title-bar-height);
         right: 0;
-        bottom: var(--status-bar-height);
+        /* Clear status bar (36px) + mobile toolbar (56px) + iOS home indicator */
+        bottom: calc(var(--status-bar-height) + 56px + env(safe-area-inset-bottom));
         width: min(calc(100vw - 64px), 320px);
         z-index: 100;
         transform: translateX(100%);
@@ -1071,9 +1116,13 @@ html, body {
         font-size: 16px;
     }
     .btn-icon {
-        width: 44px;
-        height: 32px;
+        width: 40px;
+        height: 36px;
     }
+    /* Hide doc name on very narrow screens to fit the buttons */
+    .title-bar__doc-name { display: none; }
+    .title-bar__controls { gap: 2px; }
+    .title-bar { padding: 0 var(--space-2); }
 }
 </style>
 </head>
@@ -1106,7 +1155,7 @@ html, body {
                 <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z" fill="none"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
             </button>
         </div>
-        <button class="btn-icon" id="btnDockToggle" aria-label="Toggle panels" style="display:none;" data-tooltip="Panels">
+        <button class="btn-icon dock-toggle" id="btnDockToggle" aria-label="Toggle panels" data-tooltip="Panels">
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
         </button>
     </header>
@@ -1338,13 +1387,13 @@ html, body {
             <span class="status-bar__value status-bar__value--accent" id="statusTool">Brush</span>
         </div>
     </footer>
+
+    <!-- Mobile toolbar — inside .app-grid so grid-area applies -->
+    <div class="mobile-toolbar" id="mobileToolbar" role="toolbar" aria-label="Drawing tools">
+    </div>
 </div>
 
-<!-- Mobile toolbar -->
-<div class="mobile-toolbar" id="mobileToolbar" role="toolbar" aria-label="Drawing tools">
-</div>
-
-<!-- Mobile panel overlay -->
+<!-- Mobile panel overlay (outside grid; fixed-position scrim) -->
 <div class="panel-dock-overlay" id="panelDockOverlay"></div>
 
 <!-- MODALS -->
@@ -3030,7 +3079,12 @@ html, body {
         canvasWorkspace.addEventListener('pointermove', onPointerMove);
         canvasWorkspace.addEventListener('pointerup', onPointerUp);
         canvasWorkspace.addEventListener('pointerleave', onPointerUp);
+        canvasWorkspace.addEventListener('pointercancel', onPointerUp);
         canvasWorkspace.addEventListener('wheel', onWheel, { passive: false });
+        // Block iOS browser gestures on the canvas (pinch-zoom the page, etc.)
+        canvasWorkspace.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+        canvasWorkspace.addEventListener('gesturechange', function(e) { e.preventDefault(); });
+        canvasWorkspace.addEventListener('gestureend', function(e) { e.preventDefault(); });
 
         // Keyboard events
         document.addEventListener('keydown', onKeyDown);
@@ -3097,8 +3151,83 @@ html, body {
         }).observe(canvasWorkspace);
     }
 
+    // === MULTI-TOUCH GESTURES (pinch-zoom + two-finger pan) ===
+    // Tracks active pointers on canvasWorkspace. When >=2 are down we drop into
+    // gesture mode, cancel any in-progress single-touch draw, and translate the
+    // pinch/pan into zoom + pan deltas. Returning to <2 pointers exits gesture
+    // mode without resuming the cancelled stroke (avoids drawing during release).
+    const _gesture = {
+        pointers: new Map(),   // pointerId -> {x, y}
+        active: false,
+        startDist: 0,
+        startMidX: 0,
+        startMidY: 0,
+        startZoom: 1,
+        startPanX: 0,
+        startPanY: 0,
+    };
+    function _gestureMid() {
+        let sx = 0, sy = 0, n = 0;
+        _gesture.pointers.forEach(p => { sx += p.x; sy += p.y; n++; });
+        return { x: sx / n, y: sy / n };
+    }
+    function _gestureDist() {
+        const arr = Array.from(_gesture.pointers.values());
+        if (arr.length < 2) return 0;
+        const dx = arr[0].x - arr[1].x;
+        const dy = arr[0].y - arr[1].y;
+        return Math.hypot(dx, dy);
+    }
+    function _enterGesture() {
+        // Abort any in-progress single-touch draw/select before zooming.
+        state.isDrawing = false;
+        state.isSelecting = false;
+        state.isPanning = false;
+        _gesture.active = true;
+        _gesture.startDist = _gestureDist();
+        const mid = _gestureMid();
+        _gesture.startMidX = mid.x;
+        _gesture.startMidY = mid.y;
+        _gesture.startZoom = state.zoom;
+        _gesture.startPanX = state.panX;
+        _gesture.startPanY = state.panY;
+    }
+    function _updateGesture() {
+        const dist = _gestureDist();
+        if (dist <= 0 || _gesture.startDist <= 0) return;
+        const scale = dist / _gesture.startDist;
+        const newZoom = Math.max(0.1, Math.min(5.0, _gesture.startZoom * scale));
+        const mid = _gestureMid();
+        const rect = canvasWorkspace.getBoundingClientRect();
+        // Keep the pinch midpoint stable on the document: pan compensates for zoom-around-midpoint
+        const localMidX = _gesture.startMidX - rect.left;
+        const localMidY = _gesture.startMidY - rect.top;
+        const docMidX = (localMidX - 18 - _gesture.startPanX) / _gesture.startZoom;
+        const docMidY = (localMidY - 18 - _gesture.startPanY) / _gesture.startZoom;
+        // New pan such that docMid stays under the *current* mid finger position
+        const curLocalMidX = mid.x - rect.left;
+        const curLocalMidY = mid.y - rect.top;
+        state.zoom = newZoom;
+        state.panX = curLocalMidX - 18 - docMidX * newZoom;
+        state.panY = curLocalMidY - 18 - docMidY * newZoom;
+        renderAll();
+    }
+
     // === POINTER EVENTS ===
     function onPointerDown(e) {
+        // Track all pointers for multi-touch gestures
+        _gesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (_gesture.pointers.size >= 2 && !_gesture.active) {
+            e.preventDefault();
+            _enterGesture();
+            try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+            return;
+        }
+        if (_gesture.active) {
+            // Additional touchpoint while already gesturing — recompute baseline
+            _enterGesture();
+            return;
+        }
         // Middle mouse or space+drag for pan
         if (e.button === 1 || (state.isSpacePressed && state.spaceDownTime > 0)) {
             e.preventDefault();
@@ -3196,6 +3325,15 @@ html, body {
     }
 
     function onPointerMove(e) {
+        // Update tracked pointer position for gestures
+        if (_gesture.pointers.has(e.pointerId)) {
+            _gesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        }
+        if (_gesture.active) {
+            e.preventDefault();
+            _updateGesture();
+            return;
+        }
         // Update status metrics with throttling
         if (!state._rafPending) {
             state._rafPending = true;
@@ -3262,6 +3400,17 @@ html, body {
     }
 
     function onPointerUp(e) {
+        // Remove from gesture tracking
+        _gesture.pointers.delete(e.pointerId);
+        if (_gesture.active) {
+            if (_gesture.pointers.size < 2) {
+                // Exit gesture mode; suppress any pending draw fallthrough
+                _gesture.active = false;
+                state.isDrawing = false;
+                state.isSelecting = false;
+            }
+            return;
+        }
         if (state.isPanning) {
             state.isPanning = false;
             updateCursor();
