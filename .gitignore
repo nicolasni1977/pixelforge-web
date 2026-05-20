@@ -1,0 +1,9 @@
+# Agent pipeline debug logs (raw LLM outputs, token metrics) — local-only
+_debug/
+
+# Vercel
+.vercel/
+
+# OS junk
+.DS_Store
+Thumbs.db

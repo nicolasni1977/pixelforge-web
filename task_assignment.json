@@ -1,0 +1,96 @@
+{
+  "project_name": "pixelforge-Take3",
+  "iteration": 3,
+  "max_iterations": 10,
+  "requirement_summary": "Iteration 3 resolves critical viewport clipping, filter visibility, checkerboard eyedropper contamination, and spec shortcuts for the browser-native image editor.",
+  "target_audience": "Digital artists and designers requiring a zero-dependency, instant-load, Photoshop-like workflow in the browser.",
+  "design_direction": "Strict dark theme (#0f0f13 background, #1a1a22 panels). Maintain Syne 800 / Space Grotesk / Space Mono stack. Prioritize viewport-correct canvas rendering, functional filter feedback, and precise coordinate mapping.",
+  "pages": [
+    {
+      "page_id": "workspace",
+      "page_name": "Main Editor Workspace",
+      "purpose": "Primary canvas and tool interface for image manipulation.",
+      "priority": "high",
+      "sections": [
+        {
+          "section_id": "canvas_viewport",
+          "name": "Canvas Workspace",
+          "purpose": "Viewport for displaying and editing the document with zoom/pan.",
+          "requirements": [
+            "displayCanvas sized dynamically to canvasWorkspace.clientWidth/Height",
+            "CSS repeating-conic-gradient checkerboard on .canvas-container for transparency",
+            "ctx.setTransform applied after clearing viewport, mapping document coords to visible area",
+            "No JS-drawn checkerboard to prevent eyedropper contamination"
+          ],
+          "ux_notes": "Document must never clip at nonzero pan offsets. Zoom/pan must feel instant and smooth."
+        }
+      ]
+    }
+  ],
+  "global_design_requirements": {
+    "color_palette": {
+      "primary": "#7c6af7",
+      "secondary": "#f76a6a",
+      "accent": "#4af0b8",
+      "background": "#0f0f13",
+      "text": "#e8e8f0",
+      "rationale": "Dark theme reduces eye strain for prolonged editing; accent colors provide clear operational feedback."
+    },
+    "typography": {
+      "heading_font": "Syne 800",
+      "body_font": "Space Grotesk 400/600",
+      "scale": "Brand: 24px, UI: 13px/14px, Numeric/Readouts: Space Mono 12px"
+    },
+    "layout_principles": [
+      "Three-column layout: 56px tool rail | Canvas viewport | 200px panel dock",
+      "Top title bar (36px), Bottom status bar (36px)",
+      "Mobile-responsive panels below 768px with 44px touch targets",
+      "8px spacing grid for all UI controls"
+    ],
+    "navigation": {
+      "type": "fixed-top title bar, fixed-left tool rail, fixed-right panel dock",
+      "items": [
+        "Title/DocName",
+        "Tool Icons",
+        "Layers/Options/History Panels",
+        "Status Bar Metrics"
+      ],
+      "behavior": "Sticky across all breakpoints; panels overlay on mobile"
+    },
+    "interactions": [
+      "Pointerdown/move/up only with setPointerCapture",
+      "Zoom/Pan via ctx.setTransform with dynamic viewport bounds",
+      "Filter application triggers immediate canvas recomposition",
+      "Ctrl+Z/Ctrl+Shift+Z undo/redo with layer snapshots"
+    ]
+  },
+  "planner_directives": [
+    "CRITICAL FIX - Viewport Clipping: In renderAll(), set displayCanvas.width/height to canvasWorkspace.clientWidth/Height. Clear rect, then apply setTransform(zoom,0,0,1,zoom, 18+panX, 18+panY). This ensures document content maps exactly to the visible viewport without clipping.",
+    "CRITICAL FIX - Filter Visibility: In applyFilter(), insert renderAll(); immediately after ctx.putImageData(imageData, 0, 0);. This forces immediate layer recomposition so filters are visibly applied without waiting for unrelated triggers.",
+    "MAJOR FIX - Eyedropper Contamination: Remove drawCheckerboard() from renderAll(). Rely entirely on CSS background repeating-conic-gradient on .canvas-container for transparency visualization. Verify getColorAt() samples only layer ImageData.",
+    "MAJOR FIX - Shortcut Spec: In onKeyDown, add handling for '[' and ']' to decrement/increment state.brushSize by 1, clamped 1–200. Update both UI input and readout.",
+    "MAJOR FIX - Undo Snapshot Order: In newDocument(), move saveHistory('New Document') to AFTER state.layers.push(bgLayer) and state.activeLayerIndex assignment. Initial undo must capture the initialized background layer.",
+    "MINOR FIX - Flood Fill Performance: Replace queue.shift() in floodFill() with an Int32Array head-pointer stack (push: stack[sp++]=x/y; pop: sp-=2; cx=stack[sp]; cy=stack[sp+1];). Ensures O(n) complexity.",
+    "MINOR FIX - Layout Orientation: Fix .canvas-area flex-column bug. Wrap .ruler-left and .canvas-workspace in a flex-row container, or use CSS grid with explicit grid-template-areas for rulers and canvas.",
+    "PRESERVE: Do NOT modify passing areas from v2: init crash fix, CSS custom properties, 3-font stack, layer ops, selection positioning, or pointer-event contract."
+  ],
+  "generator_directives": [
+    "Strictly inline all CSS and JS in a single index.html. Zero external dependencies except Google Fonts.",
+    "Ensure displayCanvas resizes correctly on window.resize by debouncing or using ResizeObserver, and re-runs renderAll() with new dimensions.",
+    "Verify ctx.setTransform coordinates: `displayCtx.setTransform(zoom, 0, 0, zoom, 18 + panX, 18 + panY);` is applied AFTER clearing the dynamically-sized canvas.",
+    "Confirm eyedropper tool uses `displayCtx.getImageData()` but masks out checkerboard zones, or better, calculates coordinates relative to the active layer canvas directly to avoid DOM pixel sampling issues entirely.",
+    "Maintain ES6+ syntax, IIFE/module pattern for state encapsulation, and strict mode compliance.",
+    "Run a full mental trace of: New Document -> History push -> Brush -> Render -> Filter -> Render -> Undo -> Verify all steps preserve state correctly."
+  ],
+  "iteration_focus": "Eliminate viewport clipping on displayCanvas, enable immediate filter feedback, fix eyedropper sampling contamination, implement missing bracket shortcuts, correct initial undo snapshot order, and optimize flood fill BFS. Preserve all v2 passing areas.",
+  "acceptance_criteria": [
+    "displayCanvas width/height dynamically matches canvasWorkspace viewport; full document visible at any zoom/pan without clipping or hard cutoff edges.",
+    "Applying any of the 7 filters immediately updates the canvas; zero delay or requirement of unrelated renders to see effects.",
+    "Checkerboard pattern is purely CSS; eyedropper returns correct layer pixel colors on transparent areas.",
+    "Pressing '[' and ']' correctly decreases/increases brush size by 1, clamped to 1–200, with UI synced.",
+    "New Document captures history snapshot of initialized background layer; Ctrl+Z does not wipe canvas initially.",
+    "Flood fill uses Int32Array stack; fills 800x600 canvas in <50ms without main-thread blocking.",
+    "All v2 passing areas (init, pointer events, layer ops, undo/redo, CSS vars, font stack, selection overlay) remain fully functional with zero regressions.",
+    "Code remains a single self-contained index.html with zero build step or external JS/CSS."
+  ]
+}

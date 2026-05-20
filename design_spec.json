@@ -1,0 +1,462 @@
+{
+  "project_name": "pixelforge-Take3",
+  "iteration": 3,
+  "chosen_archetypes": {
+    "primary": "Data-Dense / Bloomberg",
+    "secondary": "Swiss / Functional",
+    "exemplar_anchors": [
+      "Grafana",
+      "Linear",
+      "VS Code"
+    ],
+    "rationale": "PixelForge serves precision-focused digital artists who treat the browser canvas as a functional workspace. Data-Dense provides the keyboard-first architecture, real-time metric readouts, and dense, zero-distraction chrome. Swiss principles ensure the grid-driven layout, restrained palette, and structural clarity prevent visual noise, letting the canvas and its coordinates dominate. Together they create an instrument-grade interface where every pixel and shortcut carries operational weight.",
+    "signature_interaction": "Instant cursor coordinate snapping and tool-state feedback with <60ms DOM updates, reinforcing a tactile, responsive relationship between hand and canvas."
+  },
+  "design_system": {
+    "colors": {
+      "primary": {
+        "value": "#7c6af7",
+        "usage": "Active tool highlight, selection borders, primary focus rings"
+      },
+      "secondary": {
+        "value": "#f76a6a",
+        "usage": "Destructive actions, selection highlights, error states"
+      },
+      "accent": {
+        "value": "#4af0b8",
+        "usage": "Success states, positive metadata, export confirmation"
+      },
+      "warning": {
+        "value": "#f4c842",
+        "usage": "Unsaved document indicators, overflow warnings"
+      },
+      "background": {
+        "value": "#0f0f13",
+        "usage": "Main viewport, canvas area background"
+      },
+      "panels": {
+        "value": "#1a1a22",
+        "usage": "Tool rail, panel dock, title bar, status bar surfaces"
+      },
+      "text": {
+        "value": "#e8e8f0",
+        "usage": "Primary labels, active text, icons"
+      },
+      "dim": {
+        "value": "#7070a0",
+        "usage": "Inactive text, disabled UI, metadata, placeholders"
+      },
+      "rules": {
+        "value": "#2e2e3e",
+        "usage": "Grid lines, dividers, ruler tick marks, structural boundaries"
+      },
+      "hover": {
+        "value": "#22222e",
+        "usage": "Hover states for chrome regions"
+      },
+      "white": {
+        "value": "#ffffff",
+        "usage": "High-contrast overlays, selection fills"
+      },
+      "transparent_checker": {
+        "value": "repeating-conic-gradient(#1a1a22 0% 25%, #0f0f13 25% 50%) 0 0 / 16px 16px",
+        "usage": "Canvas container transparency visualization"
+      }
+    },
+    "typography": {
+      "font_heading": "Syne 800",
+      "font_body": "Space Grotesk 400/600",
+      "font_mono": "Space Mono",
+      "scale": {
+        "brand_display": {
+          "size": "24px",
+          "weight": "800",
+          "line_height": "1.1",
+          "font_family": "Syne 800"
+        },
+        "ui_heading": {
+          "size": "14px",
+          "weight": "600",
+          "line_height": "1.4",
+          "font_family": "Space Grotesk 600"
+        },
+        "ui_body": {
+          "size": "13px",
+          "weight": "400",
+          "line_height": "1.5",
+          "font_family": "Space Grotesk 400"
+        },
+        "numeric_readout": {
+          "size": "12px",
+          "weight": "400",
+          "line_height": "1.4",
+          "font_family": "Space Mono"
+        },
+        "caption": {
+          "size": "11px",
+          "weight": "400",
+          "line_height": "1.4",
+          "font_family": "Space Grotesk 400"
+        }
+      }
+    },
+    "spacing": {
+      "unit": "8px",
+      "scale": "4px, 8px, 12px, 16px, 24px, 32px, 48px"
+    },
+    "borders": {
+      "radius_sm": "4px",
+      "radius_md": "6px",
+      "radius_lg": "8px",
+      "radius_full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 1px 2px rgba(0,0,0,0.3)",
+      "md": "0 4px 8px rgba(0,0,0,0.35)"
+    },
+    "breakpoints": {
+      "mobile": "0-767px",
+      "tablet": "768-1023px",
+      "desktop": "1024px+"
+    },
+    "transitions": {
+      "fast": "50ms ease-out",
+      "normal": "100ms ease-out"
+    }
+  },
+  "iteration_3_directives": {
+    "viewport_clipping_fix": "In `renderAll()`, set `displayCanvas.width/height` dynamically to `canvasWorkspace.clientWidth/Height`. Clear rect, then apply `ctx.setTransform(zoom, 0, 0, zoom, 18 + panX, 18 + panY)`. This maps document coordinates exactly to the visible viewport without clipping or hard cutoff edges at nonzero pan offsets.",
+    "filter_visibility_fix": "In `applyFilter()`, call `renderAll()` immediately after `ctx.putImageData(imageData, 0, 0)`. This forces synchronous layer recomposition so filter effects are visibly applied without waiting for unrelated triggers.",
+    "eyedropper_contamination_fix": "Remove any JS-drawn checkerboard. Rely entirely on CSS `repeating-conic-gradient` on `.canvas-container`. `getColorAt()` must sample `displayCtx.getImageData()` but mask out non-pixel areas, or calculate coordinates relative to the active layer canvas directly to avoid DOM pixel sampling issues.",
+    "brush_shortcut_fix": "In `onKeyDown`, add handling for `'['` and `']'` to decrement/increment `state.brushSize` by 1, clamped 1–200. Update both the UI input field and the status bar readout synchronously.",
+    "undo_snapshot_order_fix": "In `newDocument()`, move `saveHistory('New Document')` to AFTER `state.layers.push(bgLayer)` and `state.activeLayerIndex` assignment. The initial undo must capture the initialized background layer, not a blank slate.",
+    "flood_fill_performance_fix": "Replace `queue.shift()` in `floodFill()` with an `Int32Array` head-pointer stack (`push: stack[sp++]=x/y; pop: sp-=2; cx=stack[sp]; cy=stack[sp+1];`). Ensures O(n) complexity and fills 800x600 canvas in <50ms without main-thread blocking."
+  },
+  "components": [
+    {
+      "component_id": "chrome_titlebar",
+      "type": "container",
+      "description": "Fixed top bar for document metadata and file operations",
+      "styles": {
+        "height": "36px",
+        "background": "{colors.panels}",
+        "display": "flex",
+        "justify": "space-between",
+        "align": "center",
+        "padding": "0 16px",
+        "border_bottom": "1px solid {colors.rules}"
+      },
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "component_id": "chrome_toolrail",
+      "type": "container",
+      "description": "Fixed left rail for 11 drawing tools",
+      "styles": {
+        "width": "56px",
+        "background": "{colors.panels}",
+        "display": "flex",
+        "flex_direction": "column",
+        "align_items": "center",
+        "gap": "4px",
+        "border_right": "1px solid {colors.rules}"
+      }
+    },
+    {
+      "component_id": "chrome_panel_dock",
+      "type": "container",
+      "description": "Fixed right panel for Layers, Tool Options, History, and Filters",
+      "styles": {
+        "width": "200px",
+        "background": "{colors.panels}",
+        "border_left": "1px solid {colors.rules}",
+        "display": "flex",
+        "flex_direction": "column",
+        "overflow": "hidden"
+      }
+    },
+    {
+      "component_id": "chrome_canvas_container",
+      "type": "container",
+      "description": "Central drawing workspace wrapper handling rulers, checkerboard, and canvas resize logic",
+      "styles": {
+        "display": "flex",
+        "flex_direction": "row",
+        "overflow": "hidden",
+        "position": "relative",
+        "background": "{colors.background}"
+      },
+      "variants": [
+        "default"
+      ]
+    },
+    {
+      "component_id": "chrome_statusbar",
+      "type": "container",
+      "description": "Fixed bottom bar for real-time metrics and tool state",
+      "styles": {
+        "height": "36px",
+        "background": "{colors.panels}",
+        "display": "flex",
+        "align_items": "center",
+        "padding": "0 16px",
+        "gap": "24px",
+        "border_top": "1px solid {colors.rules}",
+        "font": "{typography.numeric_readout}",
+        "color": "{colors.dim}"
+      }
+    },
+    {
+      "component_id": "btn_icon",
+      "type": "button",
+      "description": "Icon-only action button for tools and panel controls",
+      "styles": {
+        "width": "40px",
+        "height": "40px",
+        "background": "transparent",
+        "border": "1px solid transparent",
+        "border_radius": "{borders.radius_sm}",
+        "color": "{colors.dim}",
+        "cursor": "pointer",
+        "display": "inline-flex",
+        "justify": "center",
+        "align": "center"
+      },
+      "variants": [
+        "default",
+        "hover",
+        "active"
+      ],
+      "variant_styles": {
+        "hover": {
+          "background": "{colors.hover}",
+          "color": "{colors.text}"
+        },
+        "active": {
+          "background": "{colors.primary}",
+          "color": "#ffffff",
+          "border_color": "{colors.primary}"
+        }
+      }
+    },
+    {
+      "component_id": "filters_panel_card",
+      "type": "container",
+      "description": "Dedicated panel for 7 pixel filters. Controls mirror Tool Options styling.",
+      "styles": {
+        "padding": "12px",
+        "border_bottom": "1px solid {colors.rules}"
+      },
+      "requirements": [
+        "7 controls: Brightness (−100→+100), Contrast (−100→+100), Blur (0–20px), Sharpen (0–100%), Grayscale (one-click), Invert (one-click), Sepia (one-click). Each click/input calls `saveHistory()` before modifying `state.activeLayer.data`."
+      ]
+    },
+    {
+      "component_id": "input_brush_size",
+      "type": "input_text",
+      "description": "Numeric input for brush size, synced with bracket shortcuts",
+      "styles": {
+        "width": "56px",
+        "background": "{colors.background}",
+        "border": "1px solid {colors.rules}",
+        "color": "{colors.text}",
+        "font": "{typography.numeric_readout}",
+        "padding": "4px 8px"
+      }
+    }
+  ],
+  "pages": [
+    {
+      "page_id": "workspace",
+      "page_name": "Main Editor Workspace",
+      "file_name": "index.html",
+      "meta": {
+        "title": "PixelForge",
+        "description": "Professional browser-native image editor with zero dependencies.",
+        "lifecycle_fixes": [
+          "Auto-save check moved to top of init() before newDocument(). Restore skips newDocument; decline falls through.",
+          "Document JSON key standardized to 'documentName' across save/restore."
+        ]
+      },
+      "layout": {
+        "type": "chrome-shell-grid",
+        "grid_template": "\"title title title\" / auto 1fr auto\n                \"tool top dock\" / auto 18px auto\n                \"tool canvas dock\" / auto 1fr auto\n                \"tool left dock\" / auto 18px auto\n                \"status status status\" / auto 1fr auto",
+        "height": "100vh",
+        "overflow": "hidden"
+      },
+      "sections": [
+        {
+          "section_id": "title_bar",
+          "component": "chrome_titlebar",
+          "position": "grid-area: title",
+          "elements": [
+            {
+              "type": "brand",
+              "content": "PixelForge",
+              "font": "{typography.brand_display}"
+            },
+            {
+              "type": "document_name",
+              "content": "Untitled-1",
+              "font": "{typography.ui_body}"
+            },
+            {
+              "type": "button_group",
+              "children": [
+                "btn_icon(New)",
+                "btn_icon(Open)",
+                "btn_icon(Save)",
+                "btn_icon(Export)"
+              ],
+              "gap": "8px"
+            }
+          ]
+        },
+        {
+          "section_id": "tool_rail",
+          "component": "chrome_toolrail",
+          "position": "grid-area: tool",
+          "elements": [
+            "t_move",
+            "t_brush",
+            "t_pencil",
+            "t_eraser",
+            "t_spray",
+            "t_fill",
+            "t_text",
+            "t_marquee",
+            "t_lasso",
+            "t_wand",
+            "t_crop"
+          ]
+        },
+        {
+          "section_id": "canvas_workspace",
+          "component": "chrome_canvas_container",
+          "position": "grid-area: canvas",
+          "requirements": [
+            "CSS grid inside wrapper: `grid-template-columns: 18px 1fr; grid-template-rows: 18px 1fr;` to fix `.canvas-area` flex-column bug (MIN-002).",
+            "Zoom/Pan via `displayCtx.setTransform(state.zoom, 0, 0, state.zoom, rulerW + state.panX, rulerH + state.panY)` on every render.",
+            "Checkerboard transparency applied via CSS `repeating-conic-gradient` on `.canvas-container`, NOT on pixel data.",
+            "Pointer events: `pointerdown/pointermove/pointerup` with `setPointerCapture`. Push history for ['brush','pencil','eraser','spray'] on pointerUp.",
+            "Selection overlay fix: `left = (minX * zoom + state.panX + 18)`, `top = (minY * zoom + state.panY + 18)`.",
+            "Magic Wand fix: `let minX = x, minY = y, maxX = x, maxY = y`; replace all `minXBounds` with `minX`."
+          ],
+          "elements": [
+            "ruler_top",
+            "ruler_left",
+            "canvas_area",
+            "selection_overlay"
+          ]
+        },
+        {
+          "section_id": "panel_dock",
+          "component": "chrome_panel_dock",
+          "position": "grid-area: dock",
+          "elements": [
+            {
+              "type": "panel_card",
+              "id": "p_layers",
+              "components": [
+                "btnLayerDelete",
+                "btnLayerDuplicate",
+                "layer-opacity-slider",
+                "layer_list_renders"
+              ]
+            },
+            {
+              "type": "panel_card",
+              "id": "p_tool_options",
+              "dynamic_controls": true
+            },
+            {
+              "type": "panel_card",
+              "id": "p_history",
+              "content": "History (50)",
+              "scrollable": true
+            },
+            {
+              "type": "panel_card",
+              "id": "p_filters",
+              "component": "filters_panel_card"
+            }
+          ]
+        },
+        {
+          "section_id": "status_bar",
+          "component": "chrome_statusbar",
+          "position": "grid-area: status",
+          "elements": [
+            "metric_X",
+            "metric_Y",
+            "metric_W",
+            "metric_H",
+            "metric_Z",
+            "spacer",
+            "metric_tool",
+            "input_brush_size"
+          ]
+        }
+      ]
+    }
+  ],
+  "navigation_flow": {
+    "site_map": {
+      "editor": {
+        "type": "single-page-app",
+        "chrome_fixed": true
+      }
+    },
+    "primary_user_journey": [
+      "launch -> tool_select -> layer_select -> draw -> filter_apply -> export"
+    ],
+    "scroll_behavior": "none (overflow handled via CSS hide/overflow)",
+    "page_transitions": "instant (SPA chrome architecture)",
+    "keyboard_shortcuts": {
+      "V": "Move",
+      "B": "Brush",
+      "N": "Pencil",
+      "E": "Eraser",
+      "A": "Spray",
+      "G": "Fill",
+      "T": "Text",
+      "M": "Marquee",
+      "L": "Lasso",
+      "W": "Magic Wand",
+      "C": "Crop",
+      "Ctrl+S": "Save",
+      "Ctrl+O": "Open",
+      "Ctrl+N": "New",
+      "Ctrl+Z": "Undo",
+      "Ctrl+Shift+Z": "Redo",
+      "Ctrl+0": "Fit Window",
+      "Ctrl+=": "Zoom In",
+      "Ctrl+-": "Zoom Out",
+      "Space+Drag": "Pan",
+      "Wheel": "Zoom",
+      "MiddleMouse+Drag": "Pan",
+      "[": "Brush Size -1",
+      "]": "Brush Size +1"
+    }
+  },
+  "accessibility": {
+    "color_contrast": "All text meets WCAG AA (≥4.5:1 for body, ≥3:1 for large/UI). Dark mode surfaces maintain ≥3:1 contrast for icons and controls.",
+    "focus_indicators": "2px solid outline using {colors.primary} with 2px offset on all interactive chrome elements. Visible on Tab and keyboard navigation.",
+    "aria_landmarks": true,
+    "aria_labels": {
+      "toolrail": "Drawing tools",
+      "layerpanel": "Layer management",
+      "historypanel": "History stack",
+      "canvas": "Drawing surface",
+      "statusbar": "Document metrics",
+      "filters": "Pixel filters"
+    },
+    "keyboard_navigation": true,
+    "skip_links": true,
+    "alt_text_strategy": "Tool icons use aria-label for name+shortcut. Canvas uses role='img' with live region updates for selection dimensions.",
+    "screen_reader": "Status bar metrics announce via aria-live='polite' throttled to 200ms to prevent VO spam.",
+    "touch_targets": "All interactive elements enforce min 44x44px on mobile breakpoints."
+  }
+}

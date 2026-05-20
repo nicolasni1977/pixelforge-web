@@ -1,0 +1,245 @@
+{
+  "project_name": "pixelforge-Take3",
+  "iteration": 3,
+  "timestamp": "2026-05-20T03:00:00.000Z",
+  "scores": {
+    "requirement_coverage": {
+      "score": 21,
+      "max": 25,
+      "breakdown": [
+        {
+          "requirement": "All 7 filters apply immediately via ImageData with visible canvas update",
+          "status": "met",
+          "evidence": "renderAll() called directly after ctx.putImageData() in applyFilter(). All 7 types (brightness/contrast/blur/sharpen/grayscale/invert/sepia) confirmed with correct pixel math. CRIT-002 fully resolved.",
+          "deduction": 0
+        },
+        {
+          "requirement": "Canvas viewport-sized with setTransform zoom/pan — no clipping",
+          "status": "met",
+          "evidence": "renderAll() sets displayCanvas.width = canvasWorkspace.clientWidth/Height, clears, then applies setTransform(zoom,0,0,zoom,18+panX,18+panY). Full document visible at any pan/zoom. CRIT-001 fully resolved.",
+          "deduction": 0
+        },
+        {
+          "requirement": "Move tool (V) — pan canvas, drag-to-reposition",
+          "status": "partial",
+          "evidence": "Move tool sets grab cursor but onPointerDown with button 0 falls through to applyBrush(). Left-click drag on Move tool draws on canvas instead of panning. Only middle-mouse and Space+drag pan correctly.",
+          "deduction": 2
+        },
+        {
+          "requirement": "G keyboard shortcut — Fill tool only",
+          "status": "partial",
+          "evidence": "onKeyDown has two independent if-blocks for key 'g': the tool-shortcut block sets Fill, then a separate block toggles state.showGrid. Both execute on every G press. Every Fill shortcut use unexpectedly toggles grid.",
+          "deduction": 1
+        },
+        {
+          "requirement": "Mouse wheel zoom 10%–500%",
+          "status": "partial",
+          "evidence": "Plain wheel subtracts deltaX/Y from panX/panY (panning). Only Ctrl+wheel zooms. Spec states 'Zoom 10%–500% via mouse wheel' implying plain wheel should zoom.",
+          "deduction": 1
+        }
+      ]
+    },
+    "visual_design_quality": {
+      "score": 22,
+      "max": 25,
+      "breakdown": [
+        {
+          "criterion": "Color system consistency",
+          "status": "pass",
+          "detail": "All 9 spec hex values as --color-* CSS custom properties. CSS repeating-conic-gradient on .canvas-container replaces the removed JS drawCheckerboard(). No hardcoded hex outside :root.",
+          "deduction": 0
+        },
+        {
+          "criterion": "Typography hierarchy",
+          "status": "pass",
+          "detail": "Syne 800 / Space Grotesk 400+600 / Space Mono via single Google Fonts link. Correctly applied to brand, UI labels, and numeric readouts. Three-font stack preserved exactly.",
+          "deduction": 0
+        },
+        {
+          "criterion": "Spacing & alignment — ruler layout",
+          "status": "warning",
+          "detail": ".canvas-area flex-direction changed from column to row (partial fix of v2 MIN-002). ruler-top has no explicit width and only position:absolute children, so its intrinsic width collapses to 0 in flex-row — the top pixel ruler is invisible. ruler-left (18px explicit width on main axis) now renders correctly as a vertical strip.",
+          "deduction": 3
+        }
+      ]
+    },
+    "ux_and_navigation": {
+      "score": 21,
+      "max": 25,
+      "breakdown": [
+        {
+          "criterion": "7 filter workflow — immediate visual feedback",
+          "status": "pass",
+          "detail": "All 7 Apply buttons trigger immediate pixel changes. renderAll() after putImageData recomposites all layers onto the viewport-sized displayCanvas synchronously. Previously appeared completely non-functional.",
+          "deduction": 0
+        },
+        {
+          "criterion": "Primary drawing workflow — canvas fills viewport",
+          "status": "pass",
+          "detail": "displayCanvas dynamically sized to canvasWorkspace viewport. Document at any pan/zoom renders without hard-edge clipping. Full draw→filter→undo workflow confirmed end-to-end.",
+          "deduction": 0
+        },
+        {
+          "criterion": "G shortcut UX conflict",
+          "status": "fail",
+          "detail": "Pressing G to select Fill also toggles the grid overlay. Users must press G an even number of times to avoid unwanted grid state changes during normal painting workflow.",
+          "deduction": 2
+        },
+        {
+          "criterion": "Move tool (V) interaction fidelity",
+          "status": "fail",
+          "detail": "Left-click drag with Move tool active draws on canvas instead of panning. No dedicated pan path in onPointerDown for activeTool === 'move' with button 0.",
+          "deduction": 2
+        }
+      ]
+    },
+    "code_quality_and_responsiveness": {
+      "score": 21,
+      "max": 25,
+      "breakdown": [
+        {
+          "criterion": "Flood fill BFS — O(n) Int32Array stack",
+          "status": "pass",
+          "detail": "floodFill() and selectWithMagicWand() both use Int32Array head-pointer stack (sp+=2 push, sp-=2 pop). Array.shift() O(n²) removed. MIN-001 from v2 fully resolved.",
+          "deduction": 0
+        },
+        {
+          "criterion": "ResizeObserver implementation",
+          "status": "fail",
+          "detail": "ResizeObserver callback body is empty (comment: 'Could call fitToWindow here if desired'). displayCanvas retains stale dimensions when the browser window is resized; viewport sizing only corrects on the next user-triggered renderAll(). Generator directive explicitly required this.",
+          "deduction": 2
+        },
+        {
+          "criterion": "G key double-handler in onKeyDown",
+          "status": "warning",
+          "detail": "Tool-shortcut block and grid-toggle block are independent if-statements — not else-if. Both execute on key 'g'. A single else-if guard would prevent the conflict.",
+          "deduction": 1
+        },
+        {
+          "criterion": "Canvas-area ruler grid layout",
+          "status": "warning",
+          "detail": ".canvas-area flex-direction:row collapses ruler-top to 0 intrinsic width. Spec and planner directive require a 2×2 CSS grid (18px 1fr / 18px 1fr) to position both rulers and canvas-workspace correctly.",
+          "deduction": 1
+        }
+      ]
+    },
+    "total_score": 85,
+    "max_score": 100,
+    "pass_threshold": 80,
+    "passed": true
+  },
+  "critical_issues": [],
+  "major_issues": [
+    {
+      "id": "MAJ-001",
+      "severity": "major",
+      "category": "ux_navigation",
+      "title": "G key fires both Fill tool and grid toggle simultaneously",
+      "description": "onKeyDown contains two independent if-blocks that both match key 'g': the tool-shortcut block calls setTool('fill') and the grid-toggle block toggles state.showGrid. Both execute sequentially on every G keypress. Pressing G to paint floods the canvas AND toggles the grid overlay state on every use.",
+      "location": {
+        "file": "index.html",
+        "selector": "function onKeyDown",
+        "line_range": "tool-shortcut block and standalone if(key==='g') grid-toggle block"
+      },
+      "fix_suggestion": "Remove the standalone `if (key === 'g')` grid-toggle block entirely or rebind grid toggle to a non-conflicting shortcut (e.g., Ctrl+G). Alternatively, guard it inside an `else if` after the tool-shortcut block so it only fires when no tool shortcut matched."
+    },
+    {
+      "id": "MAJ-002",
+      "severity": "major",
+      "category": "requirement_coverage",
+      "title": "Move tool (V) does not pan on left-click drag",
+      "description": "The pan guard in onPointerDown only activates for button 1 (middle-mouse) or Space+drag. When activeTool === 'move' and the user left-click drags, the code falls through to applyBrush(), drawing on the canvas. Spec: 'Move (V) — pan canvas, drag-to-reposition'.",
+      "location": {
+        "file": "index.html",
+        "selector": "function onPointerDown",
+        "line_range": "if (e.button === 1 || (state.isSpacePressed && state.spaceDownTime > 0))"
+      },
+      "fix_suggestion": "Add `|| state.activeTool === 'move'` to the pan guard condition so left-click drag while Move is the active tool enters pan mode. Remove the early return guard that prevents applyBrush from running for the move case."
+    },
+    {
+      "id": "MAJ-003",
+      "severity": "major",
+      "category": "code_quality",
+      "title": "ResizeObserver callback is a no-op — canvas never auto-resizes on window resize",
+      "description": "The ResizeObserver instantiation has an empty callback (comment: 'Could call fitToWindow here if desired'). When the browser window is resized, displayCanvas retains its prior clientWidth/clientHeight until the next user action triggers renderAll(). The generator directive explicitly required this to re-run renderAll() or fitToWindow on resize.",
+      "location": {
+        "file": "index.html",
+        "selector": "new ResizeObserver(function() { })",
+        "line_range": "ResizeObserver callback inside setupEventListeners"
+      },
+      "fix_suggestion": "Replace the empty callback with `let _rsTimer; return renderAll;` or inline `clearTimeout(_rsTimer); _rsTimer = setTimeout(renderAll, 50);` to debounce and re-render on every container size change."
+    }
+  ],
+  "minor_issues": [
+    {
+      "id": "MIN-001",
+      "severity": "minor",
+      "category": "ux_navigation",
+      "title": "Top pixel ruler invisible — flex-direction:row collapses ruler-top to 0px width",
+      "description": ".canvas-area flex-direction:row lays children horizontally. ruler-top has no explicit width and only position:absolute children (rulerTicksTop), so its intrinsic main-axis width is 0. The top ruler renders as an invisible 0×18px element. ruler-left (18px explicit width) correctly renders as a vertical strip.",
+      "location": {
+        "file": "index.html",
+        "selector": ".canvas-area",
+        "line_range": "display: flex; flex-direction: row"
+      },
+      "fix_suggestion": "Replace flex with CSS grid: `.canvas-area { display:grid; grid-template-columns:18px 1fr; grid-template-rows:18px 1fr; }` and assign ruler-top to row 1 / col 2, ruler-left to row 2 / col 1, canvas-workspace to row 2 / col 2."
+    },
+    {
+      "id": "MIN-002",
+      "severity": "minor",
+      "category": "requirement_coverage",
+      "title": "Plain mouse wheel pans canvas; zoom requires Ctrl held",
+      "description": "onWheel only zooms when e.ctrlKey is true; plain scroll subtracts deltaX/Y from panX/panY. Spec states 'Zoom 10%–500% via mouse wheel', implying wheel-only should zoom. Pan should be Space+drag or middle-mouse per spec.",
+      "location": {
+        "file": "index.html",
+        "selector": "function onWheel",
+        "line_range": "if (e.ctrlKey || e.metaKey) zoomTo(...) else panX/panY"
+      },
+      "fix_suggestion": "Invert the branches: plain wheel zooms via zoomTo(state.zoom * factor, centerX, centerY); Ctrl+wheel can remain for keyboard-zoom parity. Keep Space+drag and middle-mouse for pan."
+    }
+  ],
+  "passing_areas": [
+    {
+      "area": "All six iteration-3 target fixes confirmed implemented",
+      "detail": "Viewport clipping (CRIT-001), filter renderAll (CRIT-002), eyedropper CSS checkerboard (MAJ-001 v2), bracket shortcuts (MAJ-002 v2), history snapshot order in newDocument (MAJ-003 v2), and flood fill Int32Array BFS (MIN-001 v2) are all verified resolved."
+    },
+    {
+      "area": "Wire-trace audit clean — all interactive elements resolve end-to-end",
+      "detail": "All 80+ DOM ID lookups resolve to real elements. All event-handler functions are defined in scope. Filter Apply → applyFilter → putImageData → renderAll → visible effect chain confirmed. Layer ops, undo/redo, and drawing tools all trace clean with no broken wires."
+    },
+    {
+      "area": "Eyedropper samples layer canvas directly; CSS checkerboard is pure CSS",
+      "detail": "drawCheckerboard() removed from renderAll(). .canvas-container uses repeating-conic-gradient background. Eyedropper getColorAt() calls layer.canvas.getContext('2d') — no CSS pixel contamination possible."
+    },
+    {
+      "area": "All v2 passing areas preserved with zero regressions",
+      "detail": "Init event registration, CSS custom-property system, 3-font stack, history push on pointerUp for drawing tools, layer ops (add/delete/duplicate/merge/flatten/opacity), selection overlay positioning, Magic Wand Int32Array BFS, and pointer-event contract all verified unchanged."
+    }
+  ],
+  "iteration_comparison": {
+    "improved": [
+      "CRIT-001 resolved: displayCanvas viewport-sized; full document visible at all pan/zoom offsets without hard-edge clipping",
+      "CRIT-002 resolved: applyFilter() calls renderAll() after putImageData; all 7 filters visually apply immediately on click",
+      "MAJ-001 (v2) resolved: eyedropper samples layer canvas directly; JS checkerboard removed; CSS background handles transparency visualization",
+      "MAJ-002 (v2) resolved: [ ] bracket shortcuts decrement/increment brushSize clamped 1–200 with both slider and readout synced",
+      "MAJ-003 (v2) resolved: saveHistory moved after state.layers.push in newDocument; initial Ctrl+Z no longer wipes canvas",
+      "MIN-001 (v2) resolved: floodFill and selectWithMagicWand use Int32Array O(n) head-pointer stack instead of Array.shift() O(n²)"
+    ],
+    "regressed": [],
+    "unchanged": [
+      "Move tool (V) doesn't pan on left-click drag — pre-existing from v1/v2",
+      "Plain mouse wheel pans instead of zooms per spec — pre-existing from v1/v2",
+      "Top ruler invisible — flex-direction change partially fixed v2 MIN-002 but ruler-top width still collapses"
+    ]
+  },
+  "recommendation": {
+    "action": "accept",
+    "reason": "Total score 85/100 exceeds the 80-point threshold with no critical issues. Wire-trace audit found no broken wires. All six iteration-3 target fixes are confirmed and the core draw→filter→undo→export workflow is fully functional. Remaining issues (G key double-handler, Move tool pan, ResizeObserver no-op, ruler-top invisible) are addressable in a post-acceptance patch sprint and do not block user workflows.",
+    "priority_fixes": [
+      "Fix G key double-action: change the grid-toggle block to `else if` or rebind to Ctrl+G — prevents Fill shortcut from toggling grid on every use.",
+      "Fix Move tool pan: add `|| state.activeTool === 'move'` to the onPointerDown pan guard so left-click drag pans when Move is active.",
+      "Fix ResizeObserver: replace the empty callback with a debounced renderAll() call so displayCanvas resizes correctly on browser window resize."
+    ],
+    "estimated_iterations_remaining": 0
+  }
+}

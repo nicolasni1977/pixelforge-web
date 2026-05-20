@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verifier Report · pixelforge-Take3 v3</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1a1a;
+  --ink-soft: #4a4a4a;
+  --ink-dim: #888;
+  --rule: #e6e2dc;
+  --paper: #faf7f2;
+  --accent: #ff8a6b;
+  --pass: #4a8b56;
+  --warn: #d4ad36;
+  --fail: #c95151;
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Inter", -apple-system, system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans); color: var(--ink); background: var(--paper);
+  line-height: 1.55; font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 96px; }
+.eyebrow {
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin-bottom: 16px;
+}
+h1 {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(32px, 4.5vw, 44px); line-height: 1.1;
+  letter-spacing: -0.02em; margin-bottom: 16px;
+}
+h1 em { color: var(--accent); font-style: italic; }
+.lede {
+  font-family: var(--serif); font-size: 18px; line-height: 1.5;
+  color: var(--ink-soft); max-width: 680px; margin-bottom: 32px;
+}
+h2 {
+  font-family: var(--serif); font-weight: 500; font-size: 24px;
+  letter-spacing: -0.01em; margin: 48px 0 16px;
+}
+h3 {
+  font-family: var(--sans); font-size: 13px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-dim); font-weight: 600;
+  margin: 24px 0 8px;
+}
+p { color: var(--ink-soft); margin-bottom: 12px; }
+ul, ol { padding-left: 22px; color: var(--ink-soft); margin-bottom: 12px; }
+li { margin-bottom: 4px; line-height: 1.5; }
+strong { color: var(--ink); font-weight: 600; }
+em { color: var(--ink); font-style: italic; }
+code, .mono {
+  font-family: var(--mono); font-size: 12.5px;
+  background: #fff; border: 1px solid var(--rule);
+  padding: 1px 6px; color: var(--ink);
+}
+.meta {
+  display: grid; grid-template-columns: auto 1fr; gap: 8px 24px;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  padding: 16px 0; margin-bottom: 32px; font-size: 14px;
+}
+.meta dt {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-dim); font-weight: 500; padding-top: 2px;
+}
+.meta dd { color: var(--ink-soft); }
+.crumb {
+  display: inline-flex; gap: 6px; align-items: center;
+  font-size: 12px; color: var(--ink-dim); margin-bottom: 24px;
+}
+.crumb a { color: var(--ink-dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.crumb a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.crumb .sep { color: var(--rule); }
+
+/* Score gauge */
+.score-card {
+  display: flex; align-items: baseline; gap: 16px;
+  padding: 20px 24px; background: #fff; border: 1px solid var(--rule);
+  margin-bottom: 24px;
+}
+.score-num {
+  font-family: var(--serif); font-size: 56px; line-height: 1;
+  font-weight: 400; letter-spacing: -0.02em;
+}
+.score-num.pass { color: var(--pass); }
+.score-num.warn { color: var(--warn); }
+.score-num.fail { color: var(--fail); }
+.score-of { color: var(--ink-dim); font-size: 16px; }
+.score-action {
+  margin-left: auto; font-size: 12px; letter-spacing: 0.12em;
+  text-transform: uppercase; padding: 4px 10px; border: 1px solid var(--rule-hi);
+}
+.score-action.accept { color: var(--pass); border-color: var(--pass); }
+.score-action.continue, .score-action.revise { color: var(--warn); border-color: var(--warn); }
+.score-action.stop { color: var(--fail); border-color: var(--fail); }
+
+/* Dimension bars */
+.dim-row {
+  display: grid; grid-template-columns: 1fr 60px 80px;
+  gap: 16px; align-items: center;
+  padding: 10px 0; border-bottom: 1px dashed var(--rule);
+}
+.dim-row:last-child { border-bottom: none; }
+.dim-name { color: var(--ink); }
+.dim-bar {
+  height: 6px; background: var(--rule); position: relative; grid-column: 1 / 4;
+}
+.dim-bar::after {
+  content: ""; position: absolute; left: 0; top: 0; height: 100%;
+  width: var(--w, 0%); background: var(--pass);
+}
+.dim-bar.warn::after { background: var(--warn); }
+.dim-bar.fail::after { background: var(--fail); }
+.dim-score { font-family: var(--mono); text-align: right; }
+
+/* Issues */
+.issue-group { margin-bottom: 24px; }
+.issue-group h3 .count { color: var(--ink-dim); font-weight: 400; margin-left: 6px; }
+.issue {
+  padding: 14px 0; border-bottom: 1px dashed var(--rule);
+}
+.issue:last-child { border-bottom: none; }
+.issue-title { font-weight: 600; color: var(--ink); margin-bottom: 4px; display: flex; gap: 8px; align-items: baseline; }
+.issue-id {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-dim);
+  background: #fff; padding: 1px 5px; border: 1px solid var(--rule);
+}
+.issue-desc { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
+.issue-loc { font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); margin-bottom: 6px; }
+.issue-fix { color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; }
+.issue-fix-label {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--pass); font-weight: 600; margin-right: 6px;
+}
+.sev-critical { border-left: 3px solid var(--fail); padding-left: 12px; }
+.sev-major    { border-left: 3px solid var(--warn); padding-left: 12px; }
+.sev-minor    { border-left: 3px solid var(--rule); padding-left: 12px; }
+
+/* Lists & tables */
+.kv {
+  display: grid; grid-template-columns: 200px 1fr;
+  gap: 8px 24px; padding: 10px 0; border-bottom: 1px dashed var(--rule);
+  align-items: baseline;
+}
+.kv:last-child { border-bottom: none; }
+.kv .k {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-dim); font-weight: 500;
+}
+.kv .v { color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-size: 12px; padding: 3px 10px; border: 1px solid var(--rule);
+  background: #fff; color: var(--ink-soft);
+}
+.chip.accent { color: var(--accent); border-color: var(--accent); background: rgba(255,138,107,0.05); }
+
+/* Index */
+.index-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px; margin-top: 16px;
+}
+.index-card {
+  display: block; padding: 16px; border: 1px solid var(--rule);
+  background: #fff; text-decoration: none; color: var(--ink);
+}
+.index-card:hover { border-color: var(--accent); }
+.index-card-label {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-dim); margin-bottom: 6px;
+}
+.index-card-title { font-family: var(--serif); font-size: 18px; }
+.index-card-meta { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+
+footer {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  font-size: 11px; color: var(--ink-dim);
+  letter-spacing: 0.04em;
+}
+</style>
+</head>
+<body>
+<main class="page">
+<div class="crumb"><a href="../review.html">review</a> <span class="sep">/</span> <a href="../review.html">pixelforge-Take1</a> <span class="sep">/</span> v3 <span class="sep">/</span> Verifier report</div>
+<p class="eyebrow">Verifier Agent · Audit Report</p>
+<h1>Verifier report <em>v3</em></h1>
+<div class="score-card">
+<div class="score-num pass">85</div>
+<div class="score-of">/ 100 · pass at 80</div>
+<div class="score-action accept">accept</div>
+</div>
+<h2>Score breakdown</h2>
+<div class="score-card" style="flex-direction:column;align-items:stretch;gap:0;padding:8px 24px;">
+<div class="dim-row">
+          <div class="dim-name">requirement coverage</div>
+          <div class="dim-bar " style="--w:84%;"></div>
+          <div class="dim-score">21 / 25</div>
+        </div>
+<div class="dim-row">
+          <div class="dim-name">visual design quality</div>
+          <div class="dim-bar " style="--w:88%;"></div>
+          <div class="dim-score">22 / 25</div>
+        </div>
+<div class="dim-row">
+          <div class="dim-name">ux and navigation</div>
+          <div class="dim-bar " style="--w:84%;"></div>
+          <div class="dim-score">21 / 25</div>
+        </div>
+<div class="dim-row">
+          <div class="dim-name">code quality and responsiveness</div>
+          <div class="dim-bar " style="--w:84%;"></div>
+          <div class="dim-score">21 / 25</div>
+        </div>
+</div>
+<h2>Recommendation</h2>
+<p>Total score 85/100 exceeds the 80-point threshold with no critical issues. Wire-trace audit found no broken wires. All six iteration-3 target fixes are confirmed and the core draw→filter→undo→export workflow is fully functional. Remaining issues (G key double-handler, Move tool pan, ResizeObserver no-op, ruler-top invisible) are addressable in a post-acceptance patch sprint and do not block user workflows.</p>
+<h3>Priority fixes for next iteration</h3>
+<ul>
+<li>Fix G key double-action: change the grid-toggle block to `else if` or rebind to Ctrl+G — prevents Fill shortcut from toggling grid on every use.</li>
+<li>Fix Move tool pan: add `|| state.activeTool === &#x27;move&#x27;` to the onPointerDown pan guard so left-click drag pans when Move is active.</li>
+<li>Fix ResizeObserver: replace the empty callback with a debounced renderAll() call so displayCanvas resizes correctly on browser window resize.</li>
+</ul>
+<h2>Issues</h2>
+
+<div class="issue-group sev-major">
+<h3>major <span class="count">(3)</span></h3>
+<div class="issue sev-major">
+<div class="issue-title">
+<span class="issue-id">MAJ-001</span>
+<span>G key fires both Fill tool and grid toggle simultaneously</span>
+<span style="color:var(--ink-dim);font-size:11px;font-weight:400;margin-left:auto;">ux_navigation</span>
+</div>
+<div class="issue-desc">onKeyDown contains two independent if-blocks that both match key &#x27;g&#x27;: the tool-shortcut block calls setTool(&#x27;fill&#x27;) and the grid-toggle block toggles state.showGrid. Both execute sequentially on every G keypress. Pressing G to paint floods the canvas AND toggles the grid overlay state on every use.</div>
+<div class="issue-loc">index.html · function onKeyDown · tool-shortcut block and standalone if(key===&#x27;g&#x27;) grid-toggle block</div>
+<div class="issue-fix"><span class="issue-fix-label">fix</span>Remove the standalone `if (key === &#x27;g&#x27;)` grid-toggle block entirely or rebind grid toggle to a non-conflicting shortcut (e.g., Ctrl+G). Alternatively, guard it inside an `else if` after the tool-shortcut block so it only fires when no tool shortcut matched.</div>
+</div>
+<div class="issue sev-major">
+<div class="issue-title">
+<span class="issue-id">MAJ-002</span>
+<span>Move tool (V) does not pan on left-click drag</span>
+<span style="color:var(--ink-dim);font-size:11px;font-weight:400;margin-left:auto;">requirement_coverage</span>
+</div>
+<div class="issue-desc">The pan guard in onPointerDown only activates for button 1 (middle-mouse) or Space+drag. When activeTool === &#x27;move&#x27; and the user left-click drags, the code falls through to applyBrush(), drawing on the canvas. Spec: &#x27;Move (V) — pan canvas, drag-to-reposition&#x27;.</div>
+<div class="issue-loc">index.html · function onPointerDown · if (e.button === 1 || (state.isSpacePressed &amp;&amp; state.spaceDownTime &gt; 0))</div>
+<div class="issue-fix"><span class="issue-fix-label">fix</span>Add `|| state.activeTool === &#x27;move&#x27;` to the pan guard condition so left-click drag while Move is the active tool enters pan mode. Remove the early return guard that prevents applyBrush from running for the move case.</div>
+</div>
+<div class="issue sev-major">
+<div class="issue-title">
+<span class="issue-id">MAJ-003</span>
+<span>ResizeObserver callback is a no-op — canvas never auto-resizes on window resize</span>
+<span style="color:var(--ink-dim);font-size:11px;font-weight:400;margin-left:auto;">code_quality</span>
+</div>
+<div class="issue-desc">The ResizeObserver instantiation has an empty callback (comment: &#x27;Could call fitToWindow here if desired&#x27;). When the browser window is resized, displayCanvas retains its prior clientWidth/clientHeight until the next user action triggers renderAll(). The generator directive explicitly required this to re-run renderAll() or fitToWindow on resize.</div>
+<div class="issue-loc">index.html · new ResizeObserver(function() { }) · ResizeObserver callback inside setupEventListeners</div>
+<div class="issue-fix"><span class="issue-fix-label">fix</span>Replace the empty callback with `let _rsTimer; return renderAll;` or inline `clearTimeout(_rsTimer); _rsTimer = setTimeout(renderAll, 50);` to debounce and re-render on every container size change.</div>
+</div>
+</div>
+<div class="issue-group sev-minor">
+<h3>minor <span class="count">(2)</span></h3>
+<div class="issue sev-minor">
+<div class="issue-title">
+<span class="issue-id">MIN-001</span>
+<span>Top pixel ruler invisible — flex-direction:row collapses ruler-top to 0px width</span>
+<span style="color:var(--ink-dim);font-size:11px;font-weight:400;margin-left:auto;">ux_navigation</span>
+</div>
+<div class="issue-desc">.canvas-area flex-direction:row lays children horizontally. ruler-top has no explicit width and only position:absolute children (rulerTicksTop), so its intrinsic main-axis width is 0. The top ruler renders as an invisible 0×18px element. ruler-left (18px explicit width) correctly renders as a vertical strip.</div>
+<div class="issue-loc">index.html · .canvas-area · display: flex; flex-direction: row</div>
+<div class="issue-fix"><span class="issue-fix-label">fix</span>Replace flex with CSS grid: `.canvas-area { display:grid; grid-template-columns:18px 1fr; grid-template-rows:18px 1fr; }` and assign ruler-top to row 1 / col 2, ruler-left to row 2 / col 1, canvas-workspace to row 2 / col 2.</div>
+</div>
+<div class="issue sev-minor">
+<div class="issue-title">
+<span class="issue-id">MIN-002</span>
+<span>Plain mouse wheel pans canvas; zoom requires Ctrl held</span>
+<span style="color:var(--ink-dim);font-size:11px;font-weight:400;margin-left:auto;">requirement_coverage</span>
+</div>
+<div class="issue-desc">onWheel only zooms when e.ctrlKey is true; plain scroll subtracts deltaX/Y from panX/panY. Spec states &#x27;Zoom 10%–500% via mouse wheel&#x27;, implying wheel-only should zoom. Pan should be Space+drag or middle-mouse per spec.</div>
+<div class="issue-loc">index.html · function onWheel · if (e.ctrlKey || e.metaKey) zoomTo(...) else panX/panY</div>
+<div class="issue-fix"><span class="issue-fix-label">fix</span>Invert the branches: plain wheel zooms via zoomTo(state.zoom * factor, centerX, centerY); Ctrl+wheel can remain for keyboard-zoom parity. Keep Space+drag and middle-mouse for pan.</div>
+</div>
+</div>
+<h2>Passing areas</h2>
+<ul>
+<li><strong>area</strong>: All six iteration-3 target fixes confirmed implemented · <strong>detail</strong>: Viewport clipping (CRIT-001), filter renderAll (CRIT-002), eyedropper CSS checkerboard (MAJ-001 v2), bracket shortcuts (MAJ-002 v2), history snapshot order in newDocument (MAJ-003 v2), and flood fill Int32Array BFS (MIN-001 v2) are all verified resolved.</li>
+<li><strong>area</strong>: Wire-trace audit clean — all interactive elements resolve end-to-end · <strong>detail</strong>: All 80+ DOM ID lookups resolve to real elements. All event-handler functions are defined in scope. Filter Apply → applyFilter → putImageData → renderAll → visible effect chain confirmed. Layer ops, undo/redo, and drawing tools all trace clean with no broken wires.</li>
+<li><strong>area</strong>: Eyedropper samples layer canvas directly; CSS checkerboard is pure CSS · <strong>detail</strong>: drawCheckerboard() removed from renderAll(). .canvas-container uses repeating-conic-gradient background. Eyedropper getColorAt() calls layer.canvas.getContext(&#x27;2d&#x27;) — no CSS pixel contamination possible.</li>
+<li><strong>area</strong>: All v2 passing areas preserved with zero regressions · <strong>detail</strong>: Init event registration, CSS custom-property system, 3-font stack, history push on pointerUp for drawing tools, layer ops (add/delete/duplicate/merge/flatten/opacity), selection overlay positioning, Magic Wand Int32Array BFS, and pointer-event contract all verified unchanged.</li>
+</ul>
+<h2>Iteration comparison</h2>
+<footer>Auto-rendered review page · open the source JSON next to this file for the full payload.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Task Assignment · pixelforge-Take3 v3</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1a1a;
+  --ink-soft: #4a4a4a;
+  --ink-dim: #888;
+  --rule: #e6e2dc;
+  --paper: #faf7f2;
+  --accent: #ff8a6b;
+  --pass: #4a8b56;
+  --warn: #d4ad36;
+  --fail: #c95151;
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Inter", -apple-system, system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans); color: var(--ink); background: var(--paper);
+  line-height: 1.55; font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 96px; }
+.eyebrow {
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin-bottom: 16px;
+}
+h1 {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(32px, 4.5vw, 44px); line-height: 1.1;
+  letter-spacing: -0.02em; margin-bottom: 16px;
+}
+h1 em { color: var(--accent); font-style: italic; }
+.lede {
+  font-family: var(--serif); font-size: 18px; line-height: 1.5;
+  color: var(--ink-soft); max-width: 680px; margin-bottom: 32px;
+}
+h2 {
+  font-family: var(--serif); font-weight: 500; font-size: 24px;
+  letter-spacing: -0.01em; margin: 48px 0 16px;
+}
+h3 {
+  font-family: var(--sans); font-size: 13px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-dim); font-weight: 600;
+  margin: 24px 0 8px;
+}
+p { color: var(--ink-soft); margin-bottom: 12px; }
+ul, ol { padding-left: 22px; color: var(--ink-soft); margin-bottom: 12px; }
+li { margin-bottom: 4px; line-height: 1.5; }
+strong { color: var(--ink); font-weight: 600; }
+em { color: var(--ink); font-style: italic; }
+code, .mono {
+  font-family: var(--mono); font-size: 12.5px;
+  background: #fff; border: 1px solid var(--rule);
+  padding: 1px 6px; color: var(--ink);
+}
+.meta {
+  display: grid; grid-template-columns: auto 1fr; gap: 8px 24px;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  padding: 16px 0; margin-bottom: 32px; font-size: 14px;
+}
+.meta dt {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-dim); font-weight: 500; padding-top: 2px;
+}
+.meta dd { color: var(--ink-soft); }
+.crumb {
+  display: inline-flex; gap: 6px; align-items: center;
+  font-size: 12px; color: var(--ink-dim); margin-bottom: 24px;
+}
+.crumb a { color: var(--ink-dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.crumb a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.crumb .sep { color: var(--rule); }
+
+/* Score gauge */
+.score-card {
+  display: flex; align-items: baseline; gap: 16px;
+  padding: 20px 24px; background: #fff; border: 1px solid var(--rule);
+  margin-bottom: 24px;
+}
+.score-num {
+  font-family: var(--serif); font-size: 56px; line-height: 1;
+  font-weight: 400; letter-spacing: -0.02em;
+}
+.score-num.pass { color: var(--pass); }
+.score-num.warn { color: var(--warn); }
+.score-num.fail { color: var(--fail); }
+.score-of { color: var(--ink-dim); font-size: 16px; }
+.score-action {
+  margin-left: auto; font-size: 12px; letter-spacing: 0.12em;
+  text-transform: uppercase; padding: 4px 10px; border: 1px solid var(--rule-hi);
+}
+.score-action.accept { color: var(--pass); border-color: var(--pass); }
+.score-action.continue, .score-action.revise { color: var(--warn); border-color: var(--warn); }
+.score-action.stop { color: var(--fail); border-color: var(--fail); }
+
+/* Dimension bars */
+.dim-row {
+  display: grid; grid-template-columns: 1fr 60px 80px;
+  gap: 16px; align-items: center;
+  padding: 10px 0; border-bottom: 1px dashed var(--rule);
+}
+.dim-row:last-child { border-bottom: none; }
+.dim-name { color: var(--ink); }
+.dim-bar {
+  height: 6px; background: var(--rule); position: relative; grid-column: 1 / 4;
+}
+.dim-bar::after {
+  content: ""; position: absolute; left: 0; top: 0; height: 100%;
+  width: var(--w, 0%); background: var(--pass);
+}
+.dim-bar.warn::after { background: var(--warn); }
+.dim-bar.fail::after { background: var(--fail); }
+.dim-score { font-family: var(--mono); text-align: right; }
+
+/* Issues */
+.issue-group { margin-bottom: 24px; }
+.issue-group h3 .count { color: var(--ink-dim); font-weight: 400; margin-left: 6px; }
+.issue {
+  padding: 14px 0; border-bottom: 1px dashed var(--rule);
+}
+.issue:last-child { border-bottom: none; }
+.issue-title { font-weight: 600; color: var(--ink); margin-bottom: 4px; display: flex; gap: 8px; align-items: baseline; }
+.issue-id {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-dim);
+  background: #fff; padding: 1px 5px; border: 1px solid var(--rule);
+}
+.issue-desc { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
+.issue-loc { font-family: var(--mono); font-size: 11.5px; color: var(--ink-dim); margin-bottom: 6px; }
+.issue-fix { color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; }
+.issue-fix-label {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--pass); font-weight: 600; margin-right: 6px;
+}
+.sev-critical { border-left: 3px solid var(--fail); padding-left: 12px; }
+.sev-major    { border-left: 3px solid var(--warn); padding-left: 12px; }
+.sev-minor    { border-left: 3px solid var(--rule); padding-left: 12px; }
+
+/* Lists & tables */
+.kv {
+  display: grid; grid-template-columns: 200px 1fr;
+  gap: 8px 24px; padding: 10px 0; border-bottom: 1px dashed var(--rule);
+  align-items: baseline;
+}
+.kv:last-child { border-bottom: none; }
+.kv .k {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-dim); font-weight: 500;
+}
+.kv .v { color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-size: 12px; padding: 3px 10px; border: 1px solid var(--rule);
+  background: #fff; color: var(--ink-soft);
+}
+.chip.accent { color: var(--accent); border-color: var(--accent); background: rgba(255,138,107,0.05); }
+
+/* Index */
+.index-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px; margin-top: 16px;
+}
+.index-card {
+  display: block; padding: 16px; border: 1px solid var(--rule);
+  background: #fff; text-decoration: none; color: var(--ink);
+}
+.index-card:hover { border-color: var(--accent); }
+.index-card-label {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-dim); margin-bottom: 6px;
+}
+.index-card-title { font-family: var(--serif); font-size: 18px; }
+.index-card-meta { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+
+footer {
+  margin-top: 64px; padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  font-size: 11px; color: var(--ink-dim);
+  letter-spacing: 0.04em;
+}
+</style>
+</head>
+<body>
+<main class="page">
+<div class="crumb"><a href="../review.html">review</a> <span class="sep">/</span> <a href="../review.html">pixelforge-Take1</a> <span class="sep">/</span> v3 <span class="sep">/</span> Task assignment</div>
+<p class="eyebrow">Orchestrator Agent · Task Assignment</p>
+<h1>pixelforge-Take3 <em>v3</em></h1>
+<p class="lede">Iteration 3 resolves critical viewport clipping, filter visibility, checkerboard eyedropper contamination, and spec shortcuts for the browser-native image editor.</p>
+<dl class="meta">
+<dt>Audience</dt><dd>Digital artists and designers requiring a zero-dependency, instant-load, Photoshop-like workflow in the browser.</dd>
+<dt>This iteration</dt><dd>Eliminate viewport clipping on displayCanvas, enable immediate filter feedback, fix eyedropper sampling contamination, implement missing bracket shortcuts, correct initial undo snapshot order, and optimize flood fill BFS. Preserve all v2 passing areas.</dd>
+<dt>Iteration</dt><dd>3 / 10</dd>
+</dl>
+<h2>Design direction</h2>
+<p>Strict dark theme (#0f0f13 background, #1a1a22 panels). Maintain Syne 800 / Space Grotesk / Space Mono stack. Prioritize viewport-correct canvas rendering, functional filter feedback, and precise coordinate mapping.</p>
+<h2>Pages <span style='color:var(--ink-dim);font-weight:400;font-size:14px;'>(1)</span></h2>
+<ul>
+<li><strong>page_id</strong>: workspace · <strong>page_name</strong>: Main Editor Workspace · <strong>purpose</strong>: Primary canvas and tool interface for image manipulation. · <strong>priority</strong>: high</li>
+</ul>
+<h2>Global design requirements</h2>
+<ul>
+<li>color_palette</li>
+<li>typography</li>
+<li>layout_principles</li>
+<li>navigation</li>
+<li>interactions</li>
+</ul>
+<h2>Planner directives</h2>
+<ul>
+<li>CRITICAL FIX - Viewport Clipping: In renderAll(), set displayCanvas.width/height to canvasWorkspace.clientWidth/Height. Clear rect, then apply setTransform(zoom,0,0,1,zoom, 18+panX, 18+panY). This ensures document content maps exactly to the visible viewport without clipping.</li>
+<li>CRITICAL FIX - Filter Visibility: In applyFilter(), insert renderAll(); immediately after ctx.putImageData(imageData, 0, 0);. This forces immediate layer recomposition so filters are visibly applied without waiting for unrelated triggers.</li>
+<li>MAJOR FIX - Eyedropper Contamination: Remove drawCheckerboard() from renderAll(). Rely entirely on CSS background repeating-conic-gradient on .canvas-container for transparency visualization. Verify getColorAt() samples only layer ImageData.</li>
+<li>MAJOR FIX - Shortcut Spec: In onKeyDown, add handling for &#x27;[&#x27; and &#x27;]&#x27; to decrement/increment state.brushSize by 1, clamped 1–200. Update both UI input and readout.</li>
+<li>MAJOR FIX - Undo Snapshot Order: In newDocument(), move saveHistory(&#x27;New Document&#x27;) to AFTER state.layers.push(bgLayer) and state.activeLayerIndex assignment. Initial undo must capture the initialized background layer.</li>
+<li>MINOR FIX - Flood Fill Performance: Replace queue.shift() in floodFill() with an Int32Array head-pointer stack (push: stack[sp++]=x/y; pop: sp-=2; cx=stack[sp]; cy=stack[sp+1];). Ensures O(n) complexity.</li>
+<li>MINOR FIX - Layout Orientation: Fix .canvas-area flex-column bug. Wrap .ruler-left and .canvas-workspace in a flex-row container, or use CSS grid with explicit grid-template-areas for rulers and canvas.</li>
+<li>PRESERVE: Do NOT modify passing areas from v2: init crash fix, CSS custom properties, 3-font stack, layer ops, selection positioning, or pointer-event contract.</li>
+</ul>
+<h2>Generator directives</h2>
+<ul>
+<li>Strictly inline all CSS and JS in a single index.html. Zero external dependencies except Google Fonts.</li>
+<li>Ensure displayCanvas resizes correctly on window.resize by debouncing or using ResizeObserver, and re-runs renderAll() with new dimensions.</li>
+<li>Verify ctx.setTransform coordinates: `displayCtx.setTransform(zoom, 0, 0, zoom, 18 + panX, 18 + panY);` is applied AFTER clearing the dynamically-sized canvas.</li>
+<li>Confirm eyedropper tool uses `displayCtx.getImageData()` but masks out checkerboard zones, or better, calculates coordinates relative to the active layer canvas directly to avoid DOM pixel sampling issues entirely.</li>
+<li>Maintain ES6+ syntax, IIFE/module pattern for state encapsulation, and strict mode compliance.</li>
+<li>Run a full mental trace of: New Document -&gt; History push -&gt; Brush -&gt; Render -&gt; Filter -&gt; Render -&gt; Undo -&gt; Verify all steps preserve state correctly.</li>
+</ul>
+<h2>Acceptance criteria</h2>
+<ul>
+<li>displayCanvas width/height dynamically matches canvasWorkspace viewport; full document visible at any zoom/pan without clipping or hard cutoff edges.</li>
+<li>Applying any of the 7 filters immediately updates the canvas; zero delay or requirement of unrelated renders to see effects.</li>
+<li>Checkerboard pattern is purely CSS; eyedropper returns correct layer pixel colors on transparent areas.</li>
+<li>Pressing &#x27;[&#x27; and &#x27;]&#x27; correctly decreases/increases brush size by 1, clamped to 1–200, with UI synced.</li>
+<li>New Document captures history snapshot of initialized background layer; Ctrl+Z does not wipe canvas initially.</li>
+<li>Flood fill uses Int32Array stack; fills 800x600 canvas in &lt;50ms without main-thread blocking.</li>
+<li>All v2 passing areas (init, pointer events, layer ops, undo/redo, CSS vars, font stack, selection overlay) remain fully functional with zero regressions.</li>
+<li>Code remains a single self-contained index.html with zero build step or external JS/CSS.</li>
+</ul>
+<footer>Auto-rendered review page · open the source JSON next to this file for the full payload.</footer>
+</main>
+</body>
+</html>
